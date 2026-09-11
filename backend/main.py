@@ -28,6 +28,11 @@ app.add_middleware(
 )
 
 # REST Endpoints
+@app.get("/health")
+@app.get("/ping")
+async def health_check():
+    return {"status": "ok"}
+
 @app.get("/api/status")
 async def get_status():
     return {
