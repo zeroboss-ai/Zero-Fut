@@ -28,12 +28,12 @@ app.add_middleware(
 )
 
 # REST Endpoints
-@app.get("/health")
-@app.get("/ping")
+@app.api_route("/health", methods=["GET", "HEAD"])
+@app.api_route("/ping", methods=["GET", "HEAD"])
 async def health_check():
     return {"status": "ok"}
 
-@app.get("/api/status")
+@app.api_route("/api/status", methods=["GET", "HEAD"])
 async def get_status():
     return {
         "status": "online",
@@ -80,7 +80,7 @@ static_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 async def serve_index():
     index_path = os.path.join(static_dir, "index.html")
     if os.path.exists(index_path):
