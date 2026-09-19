@@ -61,6 +61,11 @@
     hideChainDockBtn: document.getElementById('hide-chain-dock-btn'),
     chartShowChainBtn: document.getElementById('chart-show-chain-btn'),
     matrixPanel: document.querySelector('.matrix-panel'),
+    pwaInstallBtn: document.getElementById('pwa-install-btn'),
+    pwaIosModal: document.getElementById('pwa-ios-modal'),
+    pwaIosClose: document.getElementById('pwa-ios-close'),
+    pwaIosOk: document.getElementById('pwa-ios-ok'),
+    offlineToast: document.getElementById('offline-toast'),
   };
 
   // Audio Context synthesizer for high-performance tick sounds
@@ -703,11 +708,137 @@
     }, 50);
   }
 
+  // ==========================================================
+  // PWA (Progressive Web App) & Service Worker Registration
+  // ==========================================================
+  let deferredPrompt = null;
+
+  function isIosDevice() {
+    const ua = window.navigator.userAgent.toLowerCase();
+    return /iphone|ipad|ipod/.test(ua);
+  }
+
+  function isStandaloneApp() {
+    return window.matchMedia('(display-mode: standalone)').matches ||
+           window.navigator.standalone === true ||
+           document.referrer.includes('android-app://');
+  }
+
+  function initPwa() {
+    // 1. Service Worker Registration
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' })
+          .then((reg) => {
+            console.log('[ZeroSyN PWA] Service Worker registered. Scope:', reg.scope);
+            reg.onupdatefound = () => {
+              const newWorker = reg.installing;
+              if (newWorker) {
+                newWorker.onstatechange = () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    console.log('[ZeroSyN PWA] New update ready; will apply on next reload.');
+                  }
+                };
+              }
+            };
+          })
+          .catch((err) => {
+            console.warn('[ZeroSyN PWA] Service Worker registration failed:', err);
+          });
+      });
+    }
+
+    // 2. Install App Button & Prompt
+    if (isStandaloneApp()) {
+      if (el.pwaInstallBtn) el.pwaInstallBtn.classList.add('hidden');
+      return;
+    }
+
+    // Android / Chromium beforeinstallprompt event
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (el.pwaInstallBtn) {
+        el.pwaInstallBtn.classList.remove('hidden');
+      }
+    });
+
+    // App successfully installed
+    window.addEventListener('appinstalled', () => {
+      deferredPrompt = null;
+      if (el.pwaInstallBtn) el.pwaInstallBtn.classList.add('hidden');
+      console.log('[ZeroSyN PWA] App was successfully installed to home screen!');
+    });
+
+    // If on iOS and not standalone, show install button so users can open guidance
+    if (isIosDevice() && !isStandaloneApp()) {
+      if (el.pwaInstallBtn) {
+        el.pwaInstallBtn.classList.remove('hidden');
+      }
+    }
+
+    // Install Button Click Handler
+    if (el.pwaInstallBtn) {
+      el.pwaInstallBtn.addEventListener('click', async () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          console.log('[ZeroSyN PWA] User install response:', outcome);
+          deferredPrompt = null;
+          if (outcome === 'accepted') {
+            el.pwaInstallBtn.classList.add('hidden');
+          }
+        } else if (isIosDevice()) {
+          if (el.pwaIosModal) el.pwaIosModal.classList.remove('hidden');
+        } else {
+          // If browser doesn't support beforeinstallprompt
+          alert('To install ZeroSyN on your device: Tap your browser menu (⋮ or Share icon) and select "Add to Home screen" or "Install app".');
+        }
+      });
+    }
+
+    // iOS Modal Handlers
+    if (el.pwaIosClose) {
+      el.pwaIosClose.addEventListener('click', () => {
+        if (el.pwaIosModal) el.pwaIosModal.classList.add('hidden');
+      });
+    }
+    if (el.pwaIosOk) {
+      el.pwaIosOk.addEventListener('click', () => {
+        if (el.pwaIosModal) el.pwaIosModal.classList.add('hidden');
+      });
+    }
+    if (el.pwaIosModal) {
+      el.pwaIosModal.addEventListener('click', (e) => {
+        if (e.target === el.pwaIosModal) {
+          el.pwaIosModal.classList.add('hidden');
+        }
+      });
+    }
+
+    // 3. Online/Offline Network Monitoring
+    window.addEventListener('online', () => {
+      if (el.offlineToast) el.offlineToast.classList.add('hidden');
+      if (!state.isConnected) {
+        connectWebSocket();
+      }
+    });
+
+    window.addEventListener('offline', () => {
+      if (el.offlineToast) el.offlineToast.classList.remove('hidden');
+      if (el.sourceBadge) {
+        el.sourceBadge.textContent = 'OFFLINE';
+        el.sourceBadge.style.color = 'var(--bear-red)';
+      }
+    });
+  }
+
   // Initialization
   window.addEventListener('DOMContentLoaded', () => {
     initCharts();
     applyTheme(state.theme);
     attachEvents();
+    initPwa();
     try {
       if (localStorage.getItem('zerosyn_hide_chain') === '1') {
         toggleOptionChain(false);

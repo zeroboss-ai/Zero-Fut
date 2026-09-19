@@ -2,7 +2,7 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.streamer import DataStreamer
@@ -79,6 +79,36 @@ async def websocket_endpoint(websocket: WebSocket):
 static_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+# PWA & Static Endpoints
+@app.get("/manifest.json")
+@app.get("/manifest.webmanifest")
+async def serve_manifest():
+    manifest_path = os.path.join(static_dir, "manifest.json")
+    if os.path.exists(manifest_path):
+        return FileResponse(manifest_path, media_type="application/manifest+json")
+    return JSONResponse({"error": "manifest not found"}, status_code=404)
+
+@app.get("/sw.js")
+async def serve_service_worker():
+    sw_path = os.path.join(static_dir, "sw.js")
+    if os.path.exists(sw_path):
+        return FileResponse(
+            sw_path,
+            media_type="application/javascript",
+            headers={
+                "Service-Worker-Allowed": "/",
+                "Cache-Control": "no-cache, no-store, must-revalidate"
+            }
+        )
+    return JSONResponse({"error": "service worker not found"}, status_code=404)
+
+@app.get("/favicon.ico")
+async def serve_favicon():
+    fav_path = os.path.join(static_dir, "favicon.ico")
+    if os.path.exists(fav_path):
+        return FileResponse(fav_path, media_type="image/x-icon")
+    return Response(status_code=204)
 
 @app.api_route("/", methods=["GET", "HEAD"])
 async def serve_index():
