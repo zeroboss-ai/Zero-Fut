@@ -16,13 +16,18 @@ const STATIC_ASSETS = [
   '/static/favicon.ico'
 ];
 
-// Install: pre-cache static assets
+// Install: pre-cache static assets safely
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
-    }).then(() => {
-      return self.skipWaiting();
+    caches.open(CACHE_NAME).then(async (cache) => {
+      for (const asset of STATIC_ASSETS) {
+        try {
+          await cache.add(asset);
+        } catch (err) {
+          console.warn('[ZeroSyN SW] Pre-cache skip for:', asset, err);
+        }
+      }
     })
   );
 });

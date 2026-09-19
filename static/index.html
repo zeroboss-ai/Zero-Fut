@@ -30,6 +30,15 @@
   <script src="/static/lib/lightweight-charts.standalone.production.js"></script>
 </head>
 <body class="dark-theme">
+  <!-- In-App Browser Warning Banner (WhatsApp/Telegram/Instagram/FB) -->
+  <div id="inapp-browser-banner" class="inapp-banner hidden">
+    <div class="inapp-banner-content">
+      <span class="inapp-icon">⚠️</span>
+      <span class="inapp-text">In-app browser detected. Tap <strong>⋮</strong> (top right) ➔ <strong>"Open in Chrome / Browser"</strong> to install ZeroSyN on your home screen!</span>
+    </div>
+    <button id="inapp-banner-close" class="inapp-close-btn">&times;</button>
+  </div>
+
   <!-- Audio element for tick pulse -->
   <audio id="tick-audio" preload="auto">
     <source src="data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU"+Array(200).join("A") type="audio/wav">
@@ -395,6 +404,50 @@
       </div>
 
       <button id="pwa-ios-ok" class="pwa-confirm-btn">Got It!</button>
+    </div>
+  </div>
+
+  <!-- Android & Universal App Install Guidance Modal -->
+  <div id="pwa-installed-modal" class="pwa-modal-overlay hidden">
+    <div class="pwa-modal-card">
+      <div class="pwa-modal-header">
+        <div class="pwa-brand-badge">
+          <img src="/static/icons/icon-192.png" width="42" height="42" alt="ZeroSyN Logo" class="pwa-icon-img">
+          <div>
+            <h4 class="pwa-title" id="pwa-installed-title">Installing ZeroSyN App...</h4>
+            <p class="pwa-subtitle" id="pwa-installed-subtitle">Adding to your Phone's Home Screen</p>
+          </div>
+        </div>
+        <button id="pwa-installed-close" class="pwa-close-x" aria-label="Close modal">&times;</button>
+      </div>
+
+      <div class="pwa-steps">
+        <div class="pwa-step-item">
+          <div class="pwa-num">1</div>
+          <div class="pwa-desc">
+            <strong>Check your Home Screen:</strong><br>
+            Android takes 5 to 15 seconds to create the app. Look for the <strong>ZeroSyN</strong> icon on your home screen.
+          </div>
+        </div>
+
+        <div class="pwa-step-item">
+          <div class="pwa-num">2</div>
+          <div class="pwa-desc">
+            <strong>Check your App Drawer (All Apps):</strong><br>
+            If not on your main screen, <strong>swipe up</strong> from the bottom of your phone to open All Apps and find <strong>ZeroSyN</strong>.
+          </div>
+        </div>
+
+        <div class="pwa-step-item">
+          <div class="pwa-num">3</div>
+          <div class="pwa-desc">
+            <strong>Direct Chrome Shortcut (Backup):</strong><br>
+            You can also tap the <strong>3 dots (⋮)</strong> in Chrome ➔ tap <strong>"Add to Home screen"</strong> or <strong>"Install app"</strong>.
+          </div>
+        </div>
+      </div>
+
+      <button id="pwa-installed-ok" class="pwa-confirm-btn">Got It!</button>
     </div>
   </div>
 

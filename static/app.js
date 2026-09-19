@@ -66,6 +66,13 @@
     pwaIosClose: document.getElementById('pwa-ios-close'),
     pwaIosOk: document.getElementById('pwa-ios-ok'),
     offlineToast: document.getElementById('offline-toast'),
+    pwaInstalledModal: document.getElementById('pwa-installed-modal'),
+    pwaInstalledClose: document.getElementById('pwa-installed-close'),
+    pwaInstalledOk: document.getElementById('pwa-installed-ok'),
+    pwaInstalledTitle: document.getElementById('pwa-installed-title'),
+    pwaInstalledSubtitle: document.getElementById('pwa-installed-subtitle'),
+    inappBanner: document.getElementById('inapp-browser-banner'),
+    inappBannerClose: document.getElementById('inapp-banner-close'),
   };
 
   // Audio Context synthesizer for high-performance tick sounds
@@ -748,7 +755,36 @@
       });
     }
 
-    // 2. Install App Button & Prompt
+    // 2. In-App Browser Detection (WhatsApp, Telegram, FB, Instagram, Android WebView)
+    const isInApp = () => {
+      const ua = (navigator.userAgent || navigator.vendor || window.opera || '').toLowerCase();
+      return /whatsapp|telegram|instagram|fban|fbav|line|twitter|snapchat/i.test(ua) ||
+             (/\bwv\b/.test(ua) && /android/i.test(ua));
+    };
+
+    if (isInApp() && el.inappBanner) {
+      el.inappBanner.classList.remove('hidden');
+    }
+
+    if (el.inappBannerClose) {
+      el.inappBannerClose.addEventListener('click', () => {
+        if (el.inappBanner) el.inappBanner.classList.add('hidden');
+      });
+    }
+
+    function showInstalledGuidance(isSuccess = false) {
+      if (!el.pwaInstalledModal) return;
+      if (isSuccess) {
+        if (el.pwaInstalledTitle) el.pwaInstalledTitle.textContent = '🎉 ZeroSyN Installed!';
+        if (el.pwaInstalledSubtitle) el.pwaInstalledSubtitle.textContent = 'Ready on your Home Screen';
+      } else {
+        if (el.pwaInstalledTitle) el.pwaInstalledTitle.textContent = 'Installing ZeroSyN App...';
+        if (el.pwaInstalledSubtitle) el.pwaInstalledSubtitle.textContent = 'Adding to your Phone\'s Home Screen';
+      }
+      el.pwaInstalledModal.classList.remove('hidden');
+    }
+
+    // 3. Install App Button & Prompt
     if (isStandaloneApp()) {
       if (el.pwaInstallBtn) el.pwaInstallBtn.classList.add('hidden');
       return;
@@ -768,6 +804,7 @@
       deferredPrompt = null;
       if (el.pwaInstallBtn) el.pwaInstallBtn.classList.add('hidden');
       console.log('[ZeroSyN PWA] App was successfully installed to home screen!');
+      showInstalledGuidance(true);
     });
 
     // If on iOS and not standalone, show install button so users can open guidance
@@ -780,24 +817,35 @@
     // Install Button Click Handler
     if (el.pwaInstallBtn) {
       el.pwaInstallBtn.addEventListener('click', async () => {
+        if (isInApp()) {
+          alert('In-app browser detected. Please tap ⋮ (top-right) ➔ "Open in Chrome / Browser" to install the app onto your phone.');
+          return;
+        }
+
         if (deferredPrompt) {
-          deferredPrompt.prompt();
-          const { outcome } = await deferredPrompt.userChoice;
-          console.log('[ZeroSyN PWA] User install response:', outcome);
-          deferredPrompt = null;
-          if (outcome === 'accepted') {
-            el.pwaInstallBtn.classList.add('hidden');
+          try {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log('[ZeroSyN PWA] User install response:', outcome);
+            deferredPrompt = null;
+            if (outcome === 'accepted') {
+              if (el.pwaInstallBtn) el.pwaInstallBtn.classList.add('hidden');
+              showInstalledGuidance(false);
+            }
+          } catch (err) {
+            console.warn('[ZeroSyN PWA] Prompt failed:', err);
+            showInstalledGuidance(false);
           }
         } else if (isIosDevice()) {
           if (el.pwaIosModal) el.pwaIosModal.classList.remove('hidden');
         } else {
-          // If browser doesn't support beforeinstallprompt
-          alert('To install ZeroSyN on your device: Tap your browser menu (⋮ or Share icon) and select "Add to Home screen" or "Install app".');
+          // Fallback guidance for desktop / other browsers
+          showInstalledGuidance(false);
         }
       });
     }
 
-    // iOS Modal Handlers
+    // Modal Handlers (iOS & Universal Installed)
     if (el.pwaIosClose) {
       el.pwaIosClose.addEventListener('click', () => {
         if (el.pwaIosModal) el.pwaIosModal.classList.add('hidden');
@@ -812,6 +860,24 @@
       el.pwaIosModal.addEventListener('click', (e) => {
         if (e.target === el.pwaIosModal) {
           el.pwaIosModal.classList.add('hidden');
+        }
+      });
+    }
+
+    if (el.pwaInstalledClose) {
+      el.pwaInstalledClose.addEventListener('click', () => {
+        if (el.pwaInstalledModal) el.pwaInstalledModal.classList.add('hidden');
+      });
+    }
+    if (el.pwaInstalledOk) {
+      el.pwaInstalledOk.addEventListener('click', () => {
+        if (el.pwaInstalledModal) el.pwaInstalledModal.classList.add('hidden');
+      });
+    }
+    if (el.pwaInstalledModal) {
+      el.pwaInstalledModal.addEventListener('click', (e) => {
+        if (e.target === el.pwaInstalledModal) {
+          el.pwaInstalledModal.classList.add('hidden');
         }
       });
     }
