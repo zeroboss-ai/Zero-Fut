@@ -86,7 +86,14 @@ if os.path.exists(static_dir):
 async def serve_manifest():
     manifest_path = os.path.join(static_dir, "manifest.json")
     if os.path.exists(manifest_path):
-        return FileResponse(manifest_path, media_type="application/manifest+json")
+        return FileResponse(
+            manifest_path,
+            media_type="application/manifest+json",
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Cache-Control": "no-cache, no-store, must-revalidate"
+            }
+        )
     return JSONResponse({"error": "manifest not found"}, status_code=404)
 
 @app.get("/sw.js")

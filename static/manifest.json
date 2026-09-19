@@ -1,21 +1,14 @@
 {
-  "id": "/",
   "name": "ZeroSyN - Synthetic Future Live Terminal",
   "short_name": "ZeroSyN",
   "description": "Real-Time Synthetic Future Live Terminal for NSE NIFTY & BSE SENSEX",
   "start_url": "/",
+  "id": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#030712",
   "theme_color": "#030712",
-  "lang": "en-US",
-  "dir": "ltr",
-  "categories": [
-    "finance",
-    "business",
-    "utilities"
-  ],
   "icons": [
     {
       "src": "/static/icons/icon-192.png",
@@ -40,44 +33,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
-    },
-    {
-      "src": "/static/icons/apple-touch-icon.png",
-      "sizes": "180x180",
-      "type": "image/png"
-    },
-    {
-      "src": "/static/icons/icon.svg",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any"
     }
-  ],
-  "shortcuts": [
-    {
-      "name": "NIFTY 50 Synthetic",
-      "short_name": "NIFTY",
-      "url": "/?symbol=NIFTY",
-      "icons": [
-        {
-          "src": "/static/icons/icon-192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
-    },
-    {
-      "name": "SENSEX Synthetic",
-      "short_name": "SENSEX",
-      "url": "/?symbol=SENSEX",
-      "icons": [
-        {
-          "src": "/static/icons/icon-192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
-    }
-  ],
-  "prefer_related_applications": false
+  ]
 }
