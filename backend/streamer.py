@@ -52,6 +52,11 @@ class DataStreamer:
 
     async def update_client_config(self, websocket: WebSocket, new_config: Dict[str, Any]):
         if websocket in self.client_settings:
+            old_symbol = self.client_settings[websocket].get("symbol")
+            new_symbol = new_config.get("symbol")
+            if new_symbol and new_symbol != old_symbol:
+                self.client_settings[websocket]["expiry"] = None
+                self.client_settings[websocket]["strike"] = "auto"
             self.client_settings[websocket].update(new_config)
             await self.send_initial_state(websocket)
 
@@ -157,10 +162,10 @@ class DataStreamer:
                         if exp is None or not self.chains.get(sym):
                             self.chains[sym] = live_res
 
-                # Smoothly simulate micro-tick between exchange updates
+                # Only fallback to simulated data if no live exchange data exists
                 curr_chain = self.chains.get(cache_key) or self.chains.get(sym)
-                if curr_chain:
-                    simulated_tick = self.simulator.generate_tick(curr_chain, symbol=sym)
+                if not curr_chain:
+                    simulated_tick = self.simulator.generate_tick(None, symbol=sym)
                     self.chains[cache_key] = simulated_tick
 
             # Broadcast 1-second ticks to all connected clients based on their preferences

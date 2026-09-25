@@ -59,17 +59,22 @@ class SyntheticEngine:
         ce = row.get("CE") or {}
         pe = row.get("PE") or {}
 
-        if calc_mode == "mid":
-            ce_bid = ce.get("bid", 0.0)
-            ce_ask = ce.get("ask", 0.0)
-            c_price = (ce_bid + ce_ask) / 2.0 if (ce_bid > 0 and ce_ask > 0) else ce.get("ltp", 0.0)
+        ce_ltp = float(ce.get("ltp") or 0.0)
+        pe_ltp = float(pe.get("ltp") or 0.0)
+        ce_bid = float(ce.get("bid") or 0.0)
+        ce_ask = float(ce.get("ask") or 0.0)
+        pe_bid = float(pe.get("bid") or 0.0)
+        pe_ask = float(pe.get("ask") or 0.0)
 
-            pe_bid = pe.get("bid", 0.0)
-            pe_ask = pe.get("ask", 0.0)
-            p_price = (pe_bid + pe_ask) / 2.0 if (pe_bid > 0 and pe_ask > 0) else pe.get("ltp", 0.0)
+        if calc_mode == "mid":
+            c_price = (ce_bid + ce_ask) / 2.0 if (ce_bid > 0 and ce_ask > 0) else ce_ltp
+            p_price = (pe_bid + pe_ask) / 2.0 if (pe_bid > 0 and pe_ask > 0) else pe_ltp
         else:
-            c_price = ce.get("ltp", 0.0)
-            p_price = pe.get("ltp", 0.0)
+            c_price = ce_ltp if ce_ltp > 0 else ((ce_bid + ce_ask) / 2.0 if (ce_bid > 0 and ce_ask > 0) else 0.0)
+            p_price = pe_ltp if pe_ltp > 0 else ((pe_bid + pe_ask) / 2.0 if (pe_bid > 0 and pe_ask > 0) else 0.0)
+
+        c_price = round(c_price, 2)
+        p_price = round(p_price, 2)
 
         # Put-Call Parity: F = K + C - P
         synthetic_fut = round(selected_strike + c_price - p_price, 2)
@@ -85,9 +90,23 @@ class SyntheticEngine:
             k_row = strikes_map.get(k) or {}
             k_ce = k_row.get("CE") or {}
             k_pe = k_row.get("PE") or {}
-            k_c_ltp = k_ce.get("ltp", 0.0)
-            k_p_ltp = k_pe.get("ltp", 0.0)
-            k_syn = round(k + k_c_ltp - k_p_ltp, 2) if (k_c_ltp > 0 and k_p_ltp > 0) else 0.0
+            k_c_ltp = float(k_ce.get("ltp") or 0.0)
+            k_p_ltp = float(k_pe.get("ltp") or 0.0)
+            k_c_bid = float(k_ce.get("bid") or 0.0)
+            k_c_ask = float(k_ce.get("ask") or 0.0)
+            k_p_bid = float(k_pe.get("bid") or 0.0)
+            k_p_ask = float(k_pe.get("ask") or 0.0)
+
+            if calc_mode == "mid":
+                k_c_val = (k_c_bid + k_c_ask) / 2.0 if (k_c_bid > 0 and k_c_ask > 0) else k_c_ltp
+                k_p_val = (k_p_bid + k_p_ask) / 2.0 if (k_p_bid > 0 and k_p_ask > 0) else k_p_ltp
+            else:
+                k_c_val = k_c_ltp if k_c_ltp > 0 else ((k_c_bid + k_c_ask) / 2.0 if (k_c_bid > 0 and k_c_ask > 0) else 0.0)
+                k_p_val = k_p_ltp if k_p_ltp > 0 else ((k_p_bid + k_p_ask) / 2.0 if (k_p_bid > 0 and k_p_ask > 0) else 0.0)
+
+            k_c_val = round(k_c_val, 2)
+            k_p_val = round(k_p_val, 2)
+            k_syn = round(k + k_c_val - k_p_val, 2) if (k_c_val > 0 and k_p_val > 0) else 0.0
             k_basis = round(k_syn - spot, 2) if k_syn > 0 else 0.0
 
             matrix.append({
@@ -95,13 +114,13 @@ class SyntheticEngine:
                 "is_atm": (k == atm_strike),
                 "is_selected": (k == selected_strike),
                 "ce_ltp": k_c_ltp,
-                "ce_bid": k_ce.get("bid", 0.0),
-                "ce_ask": k_ce.get("ask", 0.0),
+                "ce_bid": k_c_bid,
+                "ce_ask": k_c_ask,
                 "ce_oi": k_ce.get("oi", 0),
                 "ce_change": k_ce.get("change", 0.0),
                 "pe_ltp": k_p_ltp,
-                "pe_bid": k_pe.get("bid", 0.0),
-                "pe_ask": k_pe.get("ask", 0.0),
+                "pe_bid": k_p_bid,
+                "pe_ask": k_p_ask,
                 "pe_oi": k_pe.get("oi", 0),
                 "pe_change": k_pe.get("change", 0.0),
                 "synthetic_future": k_syn,
