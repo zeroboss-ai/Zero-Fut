@@ -403,13 +403,19 @@
     el.strikeTag.textContent = syn.selected_strike === syn.atm_strike ? 'ATM' : 'CUSTOM';
     el.strikeTag.className = `metric-tag ${syn.selected_strike === syn.atm_strike ? 'formula-badge' : ''}`;
 
-    el.cePrice.textContent = syn.call_price ? `₹${syn.call_price.toFixed(2)}` : '--';
-    el.pePrice.textContent = syn.put_price ? `₹${syn.put_price.toFixed(2)}` : '--';
-    const straddle = (syn.call_price || 0) + (syn.put_price || 0);
+    const cVal = syn.call_price !== undefined ? syn.call_price : 0;
+    const pVal = syn.put_price !== undefined ? syn.put_price : 0;
+    const synFut = syn.synthetic_future !== undefined ? syn.synthetic_future : 0;
+
+    el.cePrice.textContent = cVal > 0 ? `₹${cVal.toFixed(2)}` : '--';
+    el.pePrice.textContent = pVal > 0 ? `₹${pVal.toFixed(2)}` : '--';
+    const straddle = cVal + pVal;
     el.straddlePrice.textContent = straddle > 0 ? `₹${straddle.toFixed(2)}` : '--';
 
-    // Parity breakdown equation: Strike + Call - Put
-    el.parityBreakdown.textContent = `${strike} + ${syn.call_price?.toFixed(1) || 0} − ${syn.put_price?.toFixed(1) || 0} = ${syn.synthetic_future || 0}`;
+    // Parity breakdown equation: Strike + Call - Put = Synthetic Future (2 decimal precision matching legs)
+    if (el.parityBreakdown) {
+      el.parityBreakdown.textContent = `${strike} + ${cVal.toFixed(2)} − ${pVal.toFixed(2)} = ${synFut.toFixed(2)}`;
+    }
 
     // Source and timestamp
     el.feedTimestamp.textContent = syn.timestamp ? syn.timestamp.split(' ')[1] || syn.timestamp : '--:--:--';
