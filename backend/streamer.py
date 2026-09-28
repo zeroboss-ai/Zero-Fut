@@ -62,7 +62,9 @@ class DataStreamer:
 
     async def get_or_fetch_chain(self, symbol: str, expiry: Optional[str] = None) -> Dict[str, Any]:
         cache_key = f"{symbol}_{expiry}" if expiry else symbol
-        if cache_key in self.chains and self.chains[cache_key]:
+        now = time.time()
+        last_fetch = self.last_exchange_fetch_time.get(cache_key, 0.0)
+        if cache_key in self.chains and self.chains[cache_key] and (now - last_fetch) < 1.0:
             return self.chains[cache_key]
 
         loop = asyncio.get_running_loop()
@@ -71,11 +73,14 @@ class DataStreamer:
             actual_exp = live_res.get("selected_expiry") or expiry
             self.chains[f"{symbol}_{actual_exp}"] = live_res
             self.chains[cache_key] = live_res
-            if not self.chains.get(symbol):
+            self.last_exchange_fetch_time[cache_key] = time.time()
+            self.last_exchange_fetch_time[f"{symbol}_{actual_exp}"] = time.time()
+            if expiry is None or not self.chains.get(symbol):
                 self.chains[symbol] = live_res
+                self.last_exchange_fetch_time[symbol] = time.time()
             return live_res
 
-        fallback = self.chains.get(symbol)
+        fallback = self.chains.get(cache_key) or self.chains.get(symbol)
         if fallback:
             return fallback
         return self.simulator.generate_tick(None, symbol=symbol)
@@ -100,6 +105,8 @@ class DataStreamer:
 
         payload = {
             "type": "SNAPSHOT",
+            "symbol": sym,
+            "expiry": syn_data.get("expiry"),
             "config": cfg,
             "synthetic": syn_data,
             "history": history_bars,
@@ -141,28 +148,37 @@ class DataStreamer:
 
             # Identify all active (symbol, expiry) targets needed by connected clients
             needed_targets = set()
-            for ws, cfg in self.client_settings.items():
+            for ws, cfg in list(self.client_settings.items()):
                 needed_targets.add((cfg.get("symbol", "NIFTY"), cfg.get("expiry")))
             
-            # Ensure base symbols are present
+            # Always keep base symbols warm
             needed_targets.add(("NIFTY", None))
             needed_targets.add(("SENSEX", None))
 
+            targets_to_fetch = []
             for sym, exp in needed_targets:
                 cache_key = f"{sym}_{exp}" if exp else sym
                 last_fetch = self.last_exchange_fetch_time.get(cache_key, 0.0)
-
-                if (now - last_fetch) >= 2.5:
+                if (now - last_fetch) >= 0.9:
                     self.last_exchange_fetch_time[cache_key] = now
-                    live_res = await loop.run_in_executor(None, self._fetch_exchange_sync, sym, exp)
-                    if live_res and live_res.get("spot", 0) > 0 and len(live_res.get("strikes", {})) > 0:
+                    targets_to_fetch.append((sym, exp, cache_key))
+
+            if targets_to_fetch:
+                results = await asyncio.gather(
+                    *(loop.run_in_executor(None, self._fetch_exchange_sync, sym, exp) for sym, exp, _ in targets_to_fetch),
+                    return_exceptions=True
+                )
+                for (sym, exp, cache_key), live_res in zip(targets_to_fetch, results):
+                    if isinstance(live_res, dict) and live_res.get("spot", 0) > 0 and len(live_res.get("strikes", {})) > 0:
                         actual_exp = live_res.get("selected_expiry") or exp
                         self.chains[f"{sym}_{actual_exp}"] = live_res
                         self.chains[cache_key] = live_res
+                        self.last_exchange_fetch_time[f"{sym}_{actual_exp}"] = time.time()
                         if exp is None or not self.chains.get(sym):
                             self.chains[sym] = live_res
 
-                # Only fallback to simulated data if no live exchange data exists
+            for sym, exp in needed_targets:
+                cache_key = f"{sym}_{exp}" if exp else sym
                 curr_chain = self.chains.get(cache_key) or self.chains.get(sym)
                 if not curr_chain:
                     simulated_tick = self.simulator.generate_tick(None, symbol=sym)
