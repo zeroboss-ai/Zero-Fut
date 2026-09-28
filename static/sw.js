@@ -1,5 +1,5 @@
 // ZeroSyN Service Worker
-const CACHE_NAME = 'zerosyn-terminal-v1';
+const CACHE_NAME = 'zerosyn-terminal-v2';
 
 const STATIC_ASSETS = [
   '/',

@@ -250,6 +250,9 @@
       state.isConnected = true;
       el.sourceBadge.textContent = 'LIVE';
       el.sourceBadge.className = 'text-green';
+      if (state.symbol !== 'NIFTY' || state.expiry !== null || state.strikeMode !== 'auto') {
+        sendConfig();
+      }
     };
 
     state.ws.onmessage = (event) => {
@@ -294,6 +297,9 @@
   // Handlers
   function handleSnapshot(data) {
     const syn = data.synthetic || {};
+    const msgSymbol = data.symbol || syn.symbol;
+    if (msgSymbol && msgSymbol !== state.symbol) return;
+
     const history = data.history || [];
 
     // Update Expiries Dropdown
@@ -339,6 +345,8 @@
 
   function handleTick(data) {
     const syn = data.synthetic || {};
+    const msgSymbol = data.symbol || syn.symbol;
+    if (msgSymbol && msgSymbol !== state.symbol) return;
     const bar = data.bar;
 
     if (bar) {
